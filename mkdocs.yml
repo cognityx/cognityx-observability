@@ -1,0 +1,37 @@
+site_name: Cognityx Observability
+site_description: Shared observation sessions and exporters for Cognityx components
+repo_name: cognityx-observability
+repo_url: https://github.com/cognityx/cognityx-observability
+docs_dir: docs
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - content.code.copy
+nav:
+  - Cognityx Home: https://cognityx.github.io/
+  - Home: index.md
+  - Architecture and ownership: architecture.md
+  - Public contracts: contracts.md
+  - Migration audit: migration-audit.md
+  - Python API: api.md
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            members_order: source
+strict: true
