@@ -10,7 +10,7 @@ from cognityx_observability import (
 )
 
 
-def test_structured_logging_carries_correlation_and_redacts_secrets(caplog) -> None:
+def test_structured_logging_carries_correlation_and_redacts_credentials(caplog) -> None:
     logger = logging.getLogger("cognityx.test.observability")
     session = ObservationSession(
         ObservationContext(
@@ -19,7 +19,20 @@ def test_structured_logging_carries_correlation_and_redacts_secrets(caplog) -> N
             context_id="ctx-1",
             run_id="run-1",
             correlation_id="correlation-1",
-            attributes={"api_token": "do-not-log", "tenant": "tenant-1"},
+            attributes={
+                "api_key": "do-not-log",
+                "api_token": "do-not-log",
+                "tenant": "tenant-1",
+                "reproducibility": {
+                    "tokenizer_revision": "tok-rev-1",
+                    "tokenizer_checksum": "sha256:tokenizer",
+                    "prompt_tokens": 21,
+                    "completion_tokens": 8,
+                    "token_budget": 512,
+                    "access_token": "do-not-log",
+                    "refresh_token": "do-not-log",
+                },
+            },
         ),
         StructuredLoggingExporter(logger=logger),
     )
@@ -28,13 +41,31 @@ def test_structured_logging_carries_correlation_and_redacts_secrets(caplog) -> N
         session.start()
         session.event(
             "authorization.denied",
-            attributes={"password": "secret", "resource": "document-1"},
+            attributes={
+                "Authorization": "Bearer do-not-log",
+                "password": "do-not-log",
+                "private_key": "do-not-log",
+                "resource": "document-1",
+            },
         )
         session.finish()
 
     documents = [json.loads(record.message) for record in caplog.records]
     event = next(item for item in documents if item["kind"] == "event")
     assert event["context"]["correlation_id"] == "correlation-1"
-    assert event["context"]["attributes"]["api_token"] == "[REDACTED]"
+    context = event["context"]["attributes"]
+    assert context["api_key"] == "[REDACTED]"
+    assert context["api_token"] == "[REDACTED]"
+    assert context["reproducibility"] == {
+        "tokenizer_revision": "tok-rev-1",
+        "tokenizer_checksum": "sha256:tokenizer",
+        "prompt_tokens": 21,
+        "completion_tokens": 8,
+        "token_budget": 512,
+        "access_token": "[REDACTED]",
+        "refresh_token": "[REDACTED]",
+    }
+    assert event["payload"]["attributes"]["Authorization"] == "[REDACTED]"
     assert event["payload"]["attributes"]["password"] == "[REDACTED]"
+    assert event["payload"]["attributes"]["private_key"] == "[REDACTED]"
     assert event["payload"]["attributes"]["resource"] == "document-1"

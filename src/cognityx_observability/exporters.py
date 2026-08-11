@@ -17,14 +17,22 @@ from cognityx_observability.contracts import (
     ObservationResult,
 )
 
-_SECRET_PARTS = (
-    "authorization",
-    "credential",
-    "password",
-    "secret",
-    "token",
-    "api_key",
-    "apikey",
+_CREDENTIAL_KEYS = frozenset(
+    {
+        "authorization",
+        "password",
+        "credential",
+        "credentials",
+        "api_key",
+        "apikey",
+        "api_token",
+        "secret",
+        "private_key",
+        "access_token",
+        "refresh_token",
+        "auth_token",
+        "bearer_token",
+    }
 )
 
 
@@ -451,8 +459,10 @@ def _attribute_tags(prefix: str, values: Mapping[str, Any]) -> dict[str, str]:
 
 
 def _secret_key(key: str) -> bool:
-    lowered = key.lower().replace("-", "_")
-    return any(part in lowered for part in _SECRET_PARTS)
+    separated = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", str(key))
+    normalized = re.sub(r"[^A-Za-z0-9]+", "_", separated).lower().strip("_")
+    padded = f"_{normalized}_"
+    return any(f"_{credential}_" in padded for credential in _CREDENTIAL_KEYS)
 
 
 def _safe_value(value: Any) -> Any:

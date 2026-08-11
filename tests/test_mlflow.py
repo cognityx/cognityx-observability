@@ -96,3 +96,67 @@ def test_public_identity_does_not_expose_tracking_uri_or_arbitrary_secrets() -> 
     rendered = repr(session.public_identity())
     assert "user:secret" not in rendered
     assert "attributes" not in session.public_identity()["context"]
+
+
+def test_mlflow_preserves_token_metrics_and_redacts_only_credentials(tmp_path) -> None:
+    mlflow = pytest.importorskip("mlflow")
+    tracking_uri = f"sqlite:///{tmp_path / 'credential-policy.db'}"
+    experiment_name = "Credential policy"
+    context = ObservationContext(
+        "inference",
+        "generate",
+        idempotency_key="credential-policy-test",
+        attributes={
+            "tokenizer_revision": "tok-rev-1",
+            "tokenizer_checksum": "sha256:tokenizer",
+            "prompt_tokens": 21,
+            "completion_tokens": 8,
+            "token_budget": 512,
+            "access_token": "do-not-log",
+            "refresh_token": "do-not-log",
+            "api_key": "do-not-log",
+            "Authorization": "Bearer do-not-log",
+            "password": "do-not-log",
+            "private_key": "do-not-log",
+            "nested": {
+                "prompt_tokens": 21,
+                "auth_token": "do-not-log",
+            },
+        },
+    )
+    session = ObservationSession(
+        context,
+        MLflowExporter(
+            tracking_uri=tracking_uri,
+            experiment_name=experiment_name,
+            mlflow_module=mlflow,
+        ),
+    )
+
+    started = session.start()
+    session.metric("prompt_tokens", 21)
+    completed = session.finish()
+
+    run = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri).get_run(
+        completed.external_run_id
+    )
+    assert started.status == "started"
+    assert run.data.tags["cognityx.tokenizer_revision"] == "tok-rev-1"
+    assert run.data.tags["cognityx.tokenizer_checksum"] == "sha256:tokenizer"
+    assert run.data.tags["cognityx.prompt_tokens"] == "21"
+    assert run.data.tags["cognityx.completion_tokens"] == "8"
+    assert run.data.tags["cognityx.token_budget"] == "512"
+    assert run.data.metrics["prompt_tokens"] == 21
+    assert all(
+        credential not in run.data.tags
+        for credential in (
+            "cognityx.access_token",
+            "cognityx.refresh_token",
+            "cognityx.api_key",
+            "cognityx.Authorization",
+            "cognityx.password",
+            "cognityx.private_key",
+        )
+    )
+    assert "do-not-log" not in run.data.tags["cognityx.nested"]
+    assert "[REDACTED]" in run.data.tags["cognityx.nested"]
