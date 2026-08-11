@@ -25,7 +25,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-cognityx-resource = { git = "https://github.com/cognityx/cognityx-resource.git", rev = "b23220b69fcb182e681cf13276c37474666c9bd2" }
+cognityx-resource = { git = "https://github.com/cognityx/cognityx-resource.git" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cognityx_observability"]
