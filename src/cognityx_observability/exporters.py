@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import logging
 import re
@@ -227,7 +228,7 @@ class MLflowExporter:
             raise ValueError("experiment_name must be non-empty")
         if mlflow_module is None:
             try:
-                import mlflow as selected
+                selected = importlib.import_module("mlflow")
             except ImportError as exc:
                 raise RuntimeError(
                     "MLflow export requires cognityx-observability[mlflow]"
