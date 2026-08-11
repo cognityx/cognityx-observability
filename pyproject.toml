@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cognityx-observability"
+version = "0.1.0"
+description = "Shared observation sessions and exporters for Cognityx components"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+authors = [{ name = "Cognityx" }]
+dependencies = ["cognityx-resource"]
+
+[project.optional-dependencies]
+mlflow = ["mlflow>=3.0"]
+
+[dependency-groups]
+dev = [
+    "mkdocs-material>=9.7.7",
+    "mkdocstrings-python>=2.0.5",
+    "mypy>=1.17",
+    "pytest>=8",
+    "ruff>=0.12",
+]
+
+[tool.uv.sources]
+cognityx-resource = { git = "https://github.com/cognityx/cognityx-resource.git", rev = "b23220b69fcb182e681cf13276c37474666c9bd2" }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cognityx_observability"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/cognityx_observability"]
+check_untyped_defs = true
+warn_unused_ignores = true
+ignore_missing_imports = true
